@@ -22,7 +22,7 @@ follow_me = 0
 following = false
 target = nil
 last_target = nil
-min_dist = 0.75^2
+min_dist = 0.5^2
 max_dist = 50.0^2
 repeated = false
 running = false
@@ -50,7 +50,7 @@ windower.register_event('addon command', function(command, ...)
     log('Provide a name to follow, or "me" to make others follow you.')
     log('Stop following with "stop" on a single character, or "stopall" on all characters.')
     log('Can configure auto-pausing with pauseon|pausedelay commands.')
-  elseif command == 'followme' or command == 'me' then
+  elseif command == 'followme' or command == 'me' or command == 'on' then
     self = windower.ffxi.get_mob_by_target('me')
     if not self and not repeated then
       repeated = true
@@ -64,7 +64,7 @@ windower.register_event('addon command', function(command, ...)
     if following then windower.send_ipc_message('stopfollowing '..following) end
     following = false
     tracking = false
-  elseif command == 'stopall' then
+  elseif command == 'stopall' or command == 'off' then
     follow_me = 0
     following = false
     tracking = false
