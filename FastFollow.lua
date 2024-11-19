@@ -226,15 +226,15 @@ end
 
 function handle_incoming_chunk(id, data)
 	if id == 0x00B then 
-		if __zone_begin and not target then
+		if __zone_begin and follow_me > 0 then
 			log('0x00B: packet for zone NOW.')
 			local orig_zone = windower.ffxi.get_info().zone
 			local self = windower.ffxi.get_mob_by_target('me')
 			local myself = string.lower(windower.ffxi.get_player().name)
-			if follow_me > 0 then
+			--if follow_me > 0 then
 				local response = "follow_zone "..myself.." "..orig_zone.." "..self.x.." "..self.y.." "..self.z
 				windower.send_ipc_message(response)
-			end
+			--end
 		else
 			log('0x00B: Unset zone run.')
 			__should_attempt_to_cross_zone_line = false
@@ -244,7 +244,7 @@ function handle_incoming_chunk(id, data)
 end
 
 function handle_outgoing_chunk(id, data)
-	if id == 0x05E and not target then
+	if id == 0x05E and follow_me > 0 then
 		log('0x05E: packet for request zone.')
 		__zone_begin = true
 	end
