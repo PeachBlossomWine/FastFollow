@@ -28,7 +28,7 @@ repeated = false
 running = false
 
 co = nil
-tracking = false
+
 __should_attempt_to_cross_zone_line = false
 __zone_begin = false
 __last_x = 0
@@ -63,17 +63,16 @@ windower.register_event('addon command', function(command, ...)
   elseif command == 'stop' then
     if following then windower.send_ipc_message('stopfollowing '..following) end
     following = false
-    tracking = false
+    
   elseif command == 'stopall' or command == 'off' then
     follow_me = 0
     following = false
-    tracking = false
+    
     windower.send_ipc_message('stop')
   elseif command == 'follow' then
     if #args == 0 then
       return windower.add_to_chat(0, 'FastFollow: You must provide a player name to follow.')
     end
-    casting = nil
     following = args[1]:lower()
     windower.send_ipc_message('following '..following)
     windower.ffxi.follow()
@@ -97,14 +96,12 @@ windower.register_event('ipc message', function(msgStr)
   if command == 'stop' then
     follow_me = 0
     following = false
-    tracking = false
     windower.ffxi.run(false)
   elseif command == 'follow' then
     if following then windower.send_ipc_message('stopfollowing '..following) end
+	follow_me = 0
+    following = false
     following = args[1]
-    casting = nil
-    target_pos = nil
-    last_target_pos = nil
     windower.send_ipc_message('following '..following)
     windower.ffxi.follow()
   elseif command == 'following' then
@@ -128,8 +125,6 @@ windower.register_event('ipc message', function(msgStr)
      if target.zone ~= -1 and (target.x ~= last_target.x or target.y ~= last_target.y or target.zone ~= last_target.zone) then
       last_target = target
     end
-  elseif command == 'track' then
-    tracking = args[1] == 'on' and true or false
   elseif command == 'follow_zone' then	-- For follow to zoneline
 	if following and following == args[1] and tonumber(args[2]) == windower.ffxi.get_info().zone then
 		log('IPC: To set follow run to zone flag.')
@@ -143,6 +138,7 @@ end)
 
 windower.register_event('prerender', function()
   if not follow_me and not following then return end
+  local player = windower.ffxi.get_player()
   
   if follow_me > 0 then
     local self = windower.ffxi.get_mob_by_target('me')
@@ -157,11 +153,7 @@ windower.register_event('prerender', function()
     local info = windower.ffxi.get_info()
     
     if not self or not info then return end
-    
-    if tracking then
-      windower.send_ipc_message('update '..self.name..' '..info.zone..' '..self.x..' '..self.y)
-    end
-    
+   
     if not target then
       if running then
         windower.ffxi.run(false)
@@ -174,7 +166,7 @@ windower.register_event('prerender', function()
     len = math.sqrt(distSq)
     if len < 1 then len = 1 end
     
-    if target.zone == info.zone and distSq > min_dist and distSq < max_dist then
+    if target.zone == info.zone and distSq > min_dist and distSq < max_dist and player.status ~= 1 then
       windower.ffxi.run((target.x - self.x)/len, (target.y - self.y)/len)
       running = true
     elseif target.zone == info.zone and distSq <= min_dist then
