@@ -73,6 +73,8 @@ windower.register_event('addon command', function(command, ...)
     if #args == 0 then
       return windower.add_to_chat(0, 'FastFollow: You must provide a player name to follow.')
     end
+	follow_me = 0
+    following = false
     following = args[1]:lower()
     windower.send_ipc_message('following '..following)
     windower.ffxi.follow()
