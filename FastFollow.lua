@@ -83,9 +83,7 @@ windower.register_event('addon command', function(command, ...)
     if not dist then return end
     
     dist = math.min(math.max(0.2, dist), 50.0)
-    
-    settings.min = dist
-    min_dist = settings.min^2
+    min_dist = dist^2
   elseif command and #args == 0 then
     windower.send_command('ffo follow '..command)
   end
