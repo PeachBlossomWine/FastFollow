@@ -77,9 +77,11 @@ windower.register_event('addon command', function(command, ...)
 	follow_me = 0
     following = false
     following = args[1]:lower()
+	--Do check here if it's valid name but kinda stupid because can only follow your chars?
+	windower.add_to_chat(0, 'FastFollow: Following: '..following)
     windower.send_ipc_message('following '..following)
     windower.ffxi.follow()
-  elseif command == 'min' then
+  elseif command == 'min' or command == 'dist' then
     local dist = tonumber(args[1])
     if not dist then return end
     
