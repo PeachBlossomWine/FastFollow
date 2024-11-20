@@ -54,6 +54,7 @@ windower.register_event('addon command', function(command, ...)
     self = windower.ffxi.get_mob_by_target('me')
     if not self and not repeated then
       repeated = true
+	  min_dist = 0.5^2
       windower.send_command('@wait 1; ffo followme')
       return
     end
