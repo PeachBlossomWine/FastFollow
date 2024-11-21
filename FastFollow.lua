@@ -35,8 +35,6 @@ __last_x = 0
 __last_y = 0
 __last_z = 0
 
-track_info = T{}
-
 windower.register_event('unload', function()
   windower.send_command('ffo stop')
   coroutine.sleep(0.25) -- Reduce crash on reload, since Windower seems to crash if IPC messages are received as it's restarting.
@@ -117,7 +115,6 @@ windower.register_event('ipc message', function(msgStr)
     follow_me = math.max(follow_me - 1, 0)
   elseif command == 'update' then
     local pos = {x=tonumber(args[3]), y=tonumber(args[4])}
-    track_info[args[1]] = pos
     
     if not following or args[1] ~= following then return end
     
@@ -125,8 +122,8 @@ windower.register_event('ipc message', function(msgStr)
     
     if not last_target then last_target = target end
     
-     if target.zone ~= -1 and (target.x ~= last_target.x or target.y ~= last_target.y or target.zone ~= last_target.zone) then
-      last_target = target
+    if target.zone ~= -1 and (target.x ~= last_target.x or target.y ~= last_target.y or target.zone ~= last_target.zone) then
+		last_target = target
     end
   elseif command == 'follow_zone' then	-- For follow to zoneline
 	if following and following == args[1] and tonumber(args[2]) == windower.ffxi.get_info().zone then
@@ -140,69 +137,88 @@ windower.register_event('ipc message', function(msgStr)
 end)
 
 windower.register_event('prerender', function()
-  if not follow_me and not following then return end
-  local player = windower.ffxi.get_player()
-  
-  if follow_me > 0 then
-    local self = windower.ffxi.get_mob_by_target('me')
-    local info = windower.ffxi.get_info()
-    
-    if not self or not info then return end
-    
-    args = T{'update', self.name , info.zone, self.x, self.y}
-    windower.send_ipc_message(args:concat(' '))
-  elseif following then
-    local self = windower.ffxi.get_mob_by_target('me')
-    local info = windower.ffxi.get_info()
-    
-    if not self or not info then return end
-   
-    if not target then
-      if running then
-        windower.ffxi.run(false)
-        running = false
-      end
-      return
-    end
+	if not follow_me and not following then return end
+	local player = windower.ffxi.get_player()
+	  
+	if follow_me > 0 then
+		local self = windower.ffxi.get_mob_by_target('me')
+		local info = windower.ffxi.get_info()
 
-    distSq = distanceSquared(target, self)
-    len = math.sqrt(distSq)
-    if len < 1 then len = 1 end
-    
-    if target.zone == info.zone and distSq > min_dist and distSq < max_dist and player.status ~= 1 then
-      windower.ffxi.run((target.x - self.x)/len, (target.y - self.y)/len)
-      running = true
-    elseif target.zone == info.zone and distSq <= min_dist then
-      windower.ffxi.run(false)
-      running = true
-	elseif __should_attempt_to_cross_zone_line then -- zone
-		   -- Add a distance offset along the vector direction
-		local p = windower.ffxi.get_mob_by_target('me')
-		local direction_vector = V{__last_x - p.x, __last_y - p.y, __last_z - p.z}
-		local distance_offset = 2 -- Set this to the distance you want to add (e.g., +1 or +2)
+		if not self or not info then return end
 
-		-- Normalize the direction vector and scale it by the offset distance
-		local unit_vector = direction_vector:normalize() * distance_offset
+		args = T{'update', self.name , info.zone, self.x, self.y}
+		windower.send_ipc_message(args:concat(' '))
+	elseif following then
+		local self = windower.ffxi.get_mob_by_target('me')
+		local info = windower.ffxi.get_info()
+		
+		if not self or not info then return end
+	   
+		if not target then
+			if running then
+				windower.ffxi.run(false)
+				running = false
+			end
+			return
+		end
 
-		-- Calculate the new position by adding the scaled vector
-		local adjusted_x = __last_x + unit_vector[1]
-		local adjusted_y = __last_y + unit_vector[2]
-		local adjusted_z = __last_z + unit_vector[3]
+		distSq = distanceSquared(target, self)
+		len = math.sqrt(distSq)
+		if len < 1 then len = 1 end
+		
+		if __should_attempt_to_cross_zone_line then -- zone
+			   -- Add a distance offset along the vector direction
+			local p = windower.ffxi.get_mob_by_target('me')
+			local direction_vector = V{__last_x - p.x, __last_y - p.y, __last_z - p.z}
+			local distance_offset = 2 -- Set this to the distance you want to add (e.g., +1 or +2)
 
-		-- Use the adjusted position in run_to_pos
-		run_to_pos(adjusted_x, adjusted_y, adjusted_z)
-		running = true
-    elseif running then
-      windower.ffxi.run(false)
-      running = false
-    end
-  end
+			-- Normalize the direction vector and scale it by the offset distance
+			local unit_vector = direction_vector:normalize() * distance_offset
+
+			-- Calculate the new position by adding the scaled vector
+			local adjusted_x = __last_x + unit_vector[1]
+			local adjusted_y = __last_y + unit_vector[2]
+			local adjusted_z = __last_z + unit_vector[3]
+
+			-- Use the adjusted position in run_to_pos
+			run_to_pos(adjusted_x, adjusted_y, adjusted_z)
+			running = true
+		end
+		
+		if target.zone == info.zone and distSq > min_dist and distSq < max_dist and player.status ~= 1 then
+			windower.ffxi.run((target.x - self.x)/len, (target.y - self.y)/len)
+			running = true
+		elseif target.zone == info.zone and distSq <= min_dist then
+			windower.ffxi.run(false)
+			running = true
+		-- elseif __should_attempt_to_cross_zone_line then -- zone
+			   -- -- Add a distance offset along the vector direction
+			-- local p = windower.ffxi.get_mob_by_target('me')
+			-- local direction_vector = V{__last_x - p.x, __last_y - p.y, __last_z - p.z}
+			-- local distance_offset = 2 -- Set this to the distance you want to add (e.g., +1 or +2)
+
+			-- -- Normalize the direction vector and scale it by the offset distance
+			-- local unit_vector = direction_vector:normalize() * distance_offset
+
+			-- -- Calculate the new position by adding the scaled vector
+			-- local adjusted_x = __last_x + unit_vector[1]
+			-- local adjusted_y = __last_y + unit_vector[2]
+			-- local adjusted_z = __last_z + unit_vector[3]
+
+			-- -- Use the adjusted position in run_to_pos
+			-- run_to_pos(adjusted_x, adjusted_y, adjusted_z)
+			-- running = true
+		elseif running then
+			windower.ffxi.run(false)
+			running = false
+		end
+	end
 end)
 
 function distanceSquared(A, B)
-  local dx = B.x-A.x
-  local dy = B.y-A.y
-  return dx*dx + dy*dy
+	local dx = B.x-A.x
+	local dy = B.y-A.y
+	return dx*dx + dy*dy
 end
 
 function run_to_pos(tx,ty,tz, min_distance)
@@ -221,7 +237,6 @@ function run_to_pos(tx,ty,tz, min_distance)
 		coroutine.sleep(0.15)
 	end
 	windower.ffxi.run(false)
-	coroutine.sleep(0.1)
 end
 
 
@@ -232,10 +247,8 @@ function handle_incoming_chunk(id, data)
 			local orig_zone = windower.ffxi.get_info().zone
 			local self = windower.ffxi.get_mob_by_target('me')
 			local myself = string.lower(windower.ffxi.get_player().name)
-			--if follow_me > 0 then
-				local response = "follow_zone "..myself.." "..orig_zone.." "..self.x.." "..self.y.." "..self.z
-				windower.send_ipc_message(response)
-			--end
+			local response = "follow_zone "..myself.." "..orig_zone.." "..self.x.." "..self.y.." "..self.z
+			windower.send_ipc_message(response)
 		else
 			log('0x00B: Unset zone run.')
 			__should_attempt_to_cross_zone_line = false
