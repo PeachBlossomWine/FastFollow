@@ -191,23 +191,6 @@ windower.register_event('prerender', function()
 		elseif target.zone == info.zone and distSq <= min_dist then
 			windower.ffxi.run(false)
 			running = true
-		-- elseif __should_attempt_to_cross_zone_line then -- zone
-			   -- -- Add a distance offset along the vector direction
-			-- local p = windower.ffxi.get_mob_by_target('me')
-			-- local direction_vector = V{__last_x - p.x, __last_y - p.y, __last_z - p.z}
-			-- local distance_offset = 2 -- Set this to the distance you want to add (e.g., +1 or +2)
-
-			-- -- Normalize the direction vector and scale it by the offset distance
-			-- local unit_vector = direction_vector:normalize() * distance_offset
-
-			-- -- Calculate the new position by adding the scaled vector
-			-- local adjusted_x = __last_x + unit_vector[1]
-			-- local adjusted_y = __last_y + unit_vector[2]
-			-- local adjusted_z = __last_z + unit_vector[3]
-
-			-- -- Use the adjusted position in run_to_pos
-			-- run_to_pos(adjusted_x, adjusted_y, adjusted_z)
-			-- running = true
 		elseif running then
 			windower.ffxi.run(false)
 			running = false
