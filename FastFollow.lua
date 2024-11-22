@@ -1,9 +1,7 @@
 _addon.name = 'FastFollow'
 _addon.author = 'PBW Modified'
-_addon.version = '5.0.1'
+_addon.version = '5.3.0'
 _addon.commands = {'fastfollow', 'ffo'}
-
--- TODO: pause on ranged attacks.
 
 require('strings')
 require('tables')
@@ -27,8 +25,6 @@ max_dist = 50.0^2
 repeated = false
 running = false
 
-co = nil
-
 __should_attempt_to_cross_zone_line = false
 __zone_begin = false
 __last_x = 0
@@ -47,7 +43,6 @@ windower.register_event('addon command', function(command, ...)
   if not command then
     log('Provide a name to follow, or "me" to make others follow you.')
     log('Stop following with "stop" on a single character, or "stopall" on all characters.')
-    log('Can configure auto-pausing with pauseon|pausedelay commands.')
   elseif command == 'followme' or command == 'me' or command == 'on' then
     self = windower.ffxi.get_mob_by_target('me')
     if not self and not repeated then
@@ -56,34 +51,35 @@ windower.register_event('addon command', function(command, ...)
       windower.send_command('@wait 1; ffo followme')
       return
     end
-    
     repeated = false
     windower.send_ipc_message('follow '..self.name)
+	windower.add_to_chat(0, '[FFO]: All follow leader: '..self.name)
   elseif command == 'stop' then
     if following then windower.send_ipc_message('stopfollowing '..following) end
     following = false
-    
+    windower.add_to_chat(0, '[FFO]: Stop follow.')
   elseif command == 'stopall' or command == 'off' then
     follow_me = 0
     following = false
-    
     windower.send_ipc_message('stop')
+	windower.add_to_chat(0, '[FFO]: All Stop.')
   elseif command == 'follow' then
     if #args == 0 then
-      return windower.add_to_chat(0, 'FastFollow: You must provide a player name to follow.')
+      return windower.add_to_chat(0, '[FFO]: You must provide a player name to follow.')
     end
 	follow_me = 0
     following = false
     following = args[1]:lower()
 	--Do check here if it's valid name but kinda stupid because can only follow your chars?
-	windower.add_to_chat(0, 'FastFollow: Following: '..following)
     windower.send_ipc_message('following '..following)
     windower.ffxi.follow()
+	windower.add_to_chat(0, '[FFO]: Following: '..following)
   elseif command == 'min' or command == 'dist' then
     local dist = tonumber(args[1])
     if not dist then return end
     
     dist = math.min(math.max(0.2, dist), 50.0)
+	windower.add_to_chat(0, '[FFO]: Distance: '..dist)
     min_dist = dist^2
   elseif command and #args == 0 then
     windower.send_command('ffo follow '..command)
@@ -105,6 +101,7 @@ windower.register_event('ipc message', function(msgStr)
     following = args[1]
     windower.send_ipc_message('following '..following)
     windower.ffxi.follow()
+	windower.add_to_chat(0, '[FFO]: IPC Follow: '..following)
   elseif command == 'following' then
     self = windower.ffxi.get_player()
     if not self or self.name:lower() ~= args[1] then return end
@@ -127,7 +124,7 @@ windower.register_event('ipc message', function(msgStr)
     end
   elseif command == 'follow_zone' then	-- For follow to zoneline
 	if following and following == args[1] and tonumber(args[2]) == windower.ffxi.get_info().zone then
-		log('IPC: To set follow run to zone flag.')
+		windower.add_to_chat(0, '[FFO]: IPC Run to zone.')
 		__last_x = args[3]
 		__last_y = args[4]
 		__last_z = args[5]
