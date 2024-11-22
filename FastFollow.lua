@@ -30,6 +30,7 @@ __zone_begin = false
 __last_x = 0
 __last_y = 0
 __last_z = 0
+job_registry= T{}
 
 windower.register_event('unload', function()
   windower.send_command('ffo stop')
@@ -53,19 +54,19 @@ windower.register_event('addon command', function(command, ...)
     end
     repeated = false
     windower.send_ipc_message('follow '..self.name)
-	windower.add_to_chat(0, '[FFO]: All follow leader: '..self.name)
+	windower.add_to_chat(5, '[FFO]: All follow leader: '..self.name)
   elseif command == 'stop' then
     if following then windower.send_ipc_message('stopfollowing '..following) end
     following = false
-    windower.add_to_chat(0, '[FFO]: Stop follow.')
+    windower.add_to_chat(5, '[FFO]: Stop follow.')
   elseif command == 'stopall' or command == 'off' then
     follow_me = 0
     following = false
     windower.send_ipc_message('stop')
-	windower.add_to_chat(0, '[FFO]: All Stop.')
-  elseif command == 'follow' then
+	windower.add_to_chat(5, '[FFO]: All Stop.')
+  elseif command == 'follow' or command == 'f' then
     if #args == 0 then
-      return windower.add_to_chat(0, '[FFO]: You must provide a player name to follow.')
+      return windower.add_to_chat(123, '[FFO]: You must provide a player name to follow.')
     end
 	follow_me = 0
     following = false
@@ -73,7 +74,24 @@ windower.register_event('addon command', function(command, ...)
 	--Do check here if it's valid name but kinda stupid because can only follow your chars?
     windower.send_ipc_message('following '..following)
     windower.ffxi.follow()
-	windower.add_to_chat(0, '[FFO]: Following: '..following)
+	windower.add_to_chat(5, '[FFO]: Following: '..following)
+  elseif command =='followjob' or command == 'fjob' then
+	if #args == 0 then
+      return windower.add_to_chat(123, '[FFO]: You must provide a JOB to follow.')
+    end
+	follow_me = 0
+    following = false
+    following = args[1]:lower()
+	local pname = getPlayerNameFromJob(following)
+	if (pname ~= nil) then
+		local lowername = pname:lower()
+		following = lowername
+	    windower.send_ipc_message('following '..lowername)
+		windower.ffxi.follow()
+		windower.add_to_chat(5, '[FFO]: Following: '..pname..' - '..following:upper())
+    else
+		windower.add_to_chat(123,'Error: Invalid JOB provided as a follow target: '..tostring(args[1]))
+    end
   elseif command == 'min' or command == 'dist' then
     local dist = tonumber(args[1])
     if not dist then return end
@@ -101,7 +119,7 @@ windower.register_event('ipc message', function(msgStr)
     following = args[1]
     windower.send_ipc_message('following '..following)
     windower.ffxi.follow()
-	windower.add_to_chat(0, '[FFO]: IPC Follow: '..following)
+	windower.add_to_chat(5, '[FFO]: IPC Follow: '..following)
   elseif command == 'following' then
     self = windower.ffxi.get_player()
     if not self or self.name:lower() ~= args[1] then return end
@@ -124,7 +142,7 @@ windower.register_event('ipc message', function(msgStr)
     end
   elseif command == 'follow_zone' then	-- For follow to zoneline
 	if following and following == args[1] and tonumber(args[2]) == windower.ffxi.get_info().zone then
-		windower.add_to_chat(0, '[FFO]: IPC Run to zone.')
+		windower.add_to_chat(5, '[FFO]: IPC Run to zone.')
 		__last_x = args[3]
 		__last_y = args[4]
 		__last_z = args[5]
@@ -219,27 +237,70 @@ function run_to_pos(tx,ty,tz, min_distance)
 	windower.ffxi.run(false)
 end
 
+function getPlayerNameFromJob(job)
+	local target
+	for k, v in pairs(windower.ffxi.get_party()) do
+		if type(v) == 'table' and v.mob ~= nil and v.mob.in_party then
+			if ((job:lower() == 'tank' and S{'PLD','RUN'}:contains(get_registry(v.mob.id))) or (job:lower() ~= 'tank' and get_registry(v.mob.id):lower() == job:lower())) then
+				target = v.name
+			end
+		end
+	end
+    if target ~= nil then
+        return target
+    end
+    return nil
+end
+
+function set_registry(id, job_id)
+    if not id then return false end
+    job_registry[id] = job_registry[id] or 'NON'
+    job_id = job_id or 0
+    if res.jobs[job_id].ens == 'NON' and job_registry[id] and not S{'NON', 'UNK'}:contains(job_registry[id]) then 
+        return false
+    end
+    job_registry[id] = res.jobs[job_id].ens
+    return true
+end
+
+function get_registry(id)
+    if job_registry[id] then
+		return job_registry[id]
+    else
+        return 'UNK'
+    end
+end
 
 function handle_incoming_chunk(id, data)
 	if id == 0x00B then 
 		if __zone_begin and follow_me > 0 then
-			log('0x00B: packet for zone NOW.')
+			--log('0x00B: packet for zone NOW.')
 			local orig_zone = windower.ffxi.get_info().zone
 			local self = windower.ffxi.get_mob_by_target('me')
 			local myself = string.lower(windower.ffxi.get_player().name)
 			local response = "follow_zone "..myself.." "..orig_zone.." "..self.x.." "..self.y.." "..self.z
 			windower.send_ipc_message(response)
 		else
-			log('0x00B: Unset zone run.')
+			--log('0x00B: Unset zone run.')
 			__should_attempt_to_cross_zone_line = false
 		end
+	elseif (id == 0x0DD or id == 0x0DF or id == 0x0C8) then	--Party member update
+        local parsed = packets.parse('incoming', data)
+		if parsed then
+			local playerId = parsed['ID']
+			local indexx = parsed['Index']
+			local job = parsed['Main job']
+			
+			if playerId and playerId > 0 then
+				set_registry(parsed['ID'], parsed['Main job'])
+			end
+		end
     end
-	
 end
 
 function handle_outgoing_chunk(id, data)
 	if id == 0x05E and follow_me > 0 then
-		log('0x05E: packet for request zone.')
+		--log('0x05E: packet for request zone.')
 		__zone_begin = true
 	end
 end
