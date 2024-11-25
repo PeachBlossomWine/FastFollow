@@ -30,6 +30,7 @@ __zone_begin = false
 __last_x = 0
 __last_y = 0
 __last_z = 0
+__engage = false
 job_registry= T{}
 
 windower.register_event('unload', function()
@@ -97,8 +98,16 @@ windower.register_event('addon command', function(command, ...)
     if not dist then return end
     
     dist = math.min(math.max(0.2, dist), 50.0)
-	windower.add_to_chat(0, '[FFO]: Distance: '..dist)
+	windower.add_to_chat(5, '[FFO]: Distance: '..dist)
     min_dist = dist^2
+  elseif command == 'engage' then
+	if not __engage then
+		__engage = true
+		windower.add_to_chat(5, '[FFO]: Follow while engaged ON')
+	else
+		__engage = false
+		windower.add_to_chat(5, '[FFO]: Follow while engaged OFF')
+	end
   elseif command and #args == 0 then
     windower.send_command('ffo follow '..command)
   end
@@ -200,7 +209,7 @@ windower.register_event('prerender', function()
 			running = true
 		end
 		
-		if target.zone == info.zone and distSq > min_dist and distSq < max_dist and player.status ~= 1 then
+		if target.zone == info.zone and distSq > min_dist and distSq < max_dist and (__engage or (not __engage and player.status ~= 1)) then --  and player.status ~= 1
 			windower.ffxi.run((target.x - self.x)/len, (target.y - self.y)/len)
 			running = true
 		elseif target.zone == info.zone and distSq <= min_dist then
