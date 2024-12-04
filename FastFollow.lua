@@ -31,6 +31,7 @@ __last_x = 0
 __last_y = 0
 __last_z = 0
 __engage = false
+__in_mog_house = false
 job_registry= T{}
 
 windower.register_event('unload', function()
@@ -177,6 +178,7 @@ windower.register_event('prerender', function()
 		local info = windower.ffxi.get_info()
 		
 		if not self or not info then return end
+		if __in_mog_house then return end
 	   
 		if not target then
 			if running then
@@ -194,7 +196,7 @@ windower.register_event('prerender', function()
 			   -- Add a distance offset along the vector direction
 			local p = windower.ffxi.get_mob_by_target('me')
 			local direction_vector = V{__last_x - p.x, __last_y - p.y, __last_z - p.z}
-			local distance_offset = 2 -- Set this to the distance you want to add (e.g., +1 or +2)
+			local distance_offset = 2.5 -- Set this to the distance you want to add (e.g., +1 or +2)
 
 			-- Normalize the direction vector and scale it by the offset distance
 			local unit_vector = direction_vector:normalize() * distance_offset
@@ -203,16 +205,27 @@ windower.register_event('prerender', function()
 			local adjusted_x = __last_x + unit_vector[1]
 			local adjusted_y = __last_y + unit_vector[2]
 			local adjusted_z = __last_z + unit_vector[3]
+			
+			-- Calculate the distance from the current position to the adjusted position
+			local distance_to_adjusted = (V{adjusted_x - p.x, adjusted_y - p.y, adjusted_z - p.z}):length()
 
-			-- Use the adjusted position in run_to_pos
-			run_to_pos(adjusted_x, adjusted_y, adjusted_z)
-			running = true
+			-- Add a check for the distance
+			if distance_to_adjusted > 40 then
+				windower.add_to_chat(5, '[FFO]: Adjusted position is too far: ' .. distance_to_adjusted .. '. Aborting.')
+				running = false
+				__should_attempt_to_cross_zone_line = false
+				return
+			else
+				windower.ffxi.run(adjusted_x, adjusted_y)
+				running = true
+				return
+			end
 		end
 		
 		if target.zone == info.zone and distSq > min_dist and distSq < max_dist and (__engage or (not __engage and player.status ~= 1)) then --  and player.status ~= 1
 			windower.ffxi.run((target.x - self.x)/len, (target.y - self.y)/len)
 			running = true
-		elseif target.zone == info.zone and distSq <= min_dist then
+		elseif target.zone == info.zone and distSq <= min_dist and not __should_attempt_to_cross_zone_line then
 			windower.ffxi.run(false)
 			running = true
 		elseif running then
@@ -226,24 +239,6 @@ function distanceSquared(A, B)
 	local dx = B.x-A.x
 	local dy = B.y-A.y
 	return dx*dx + dy*dy
-end
-
-function run_to_pos(tx,ty,tz, min_distance)
-	min_distance = min_distance or 0.2
-	
-	local p = windower.ffxi.get_mob_by_target('me')
-
-	windower.ffxi.run(tx-p.x, ty-p.y)
-	p_2 = windower.ffxi.get_mob_by_index(p.index)
-	
-	while p_2 and ((V{p_2.x, p_2.y, (p_2.z*-1)} - V{tx, ty, (tz*-1)}):length()) >= min_distance do
-		p_2 = windower.ffxi.get_mob_by_index(p.index)
-		if p_2 then
-			windower.ffxi.run(tx-p_2.x, ty-p_2.y)
-		end
-		coroutine.sleep(0.15)
-	end
-	windower.ffxi.run(false)
 end
 
 function getPlayerNameFromJob(job)
@@ -304,13 +299,17 @@ function handle_incoming_chunk(id, data)
 				set_registry(parsed['ID'], parsed['Main job'])
 			end
 		end
+	elseif id == 0x00A then
+		__in_mog_house = data:byte(0x81) == 1
     end
 end
 
 function handle_outgoing_chunk(id, data)
 	if id == 0x05E and follow_me > 0 then
-		--log('0x05E: packet for request zone.')
-		__zone_begin = true
+		if not __in_mog_house then
+			windower.add_to_chat(5, '[FFO]: 0x05E: Leader request to zone.')
+			__zone_begin = true
+		end
 	end
 end
 
