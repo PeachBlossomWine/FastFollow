@@ -196,7 +196,7 @@ windower.register_event('prerender', function()
 			   -- Add a distance offset along the vector direction
 			local p = windower.ffxi.get_mob_by_target('me')
 			local direction_vector = V{__last_x - p.x, __last_y - p.y, __last_z - p.z}
-			local distance_offset = 2.5 -- Set this to the distance you want to add (e.g., +1 or +2)
+			local distance_offset = 1.9 -- Set this to the distance you want to add (e.g., +1 or +2)
 
 			-- Normalize the direction vector and scale it by the offset distance
 			local unit_vector = direction_vector:normalize() * distance_offset
