@@ -7,6 +7,7 @@ require('strings')
 require('tables')
 require('sets')
 require('coroutine')
+local socket = require('socket')
 packets = require('packets')
 res = require('resources')
 items = res.items
@@ -24,6 +25,13 @@ min_dist = 0.5^2
 max_dist = 50.0^2
 repeated = false
 running = false
+local lastUpdTime = 0
+local lastZonePosUpdTime = 0
+-- Global position update interval in milliseconds
+local updateIntervalMsec = 50
+-- Zoning only position update interval in milliseconds
+local zonePosUpdateInterval = 3000
+
 
 __should_attempt_to_cross_zone_line = false
 __zone_begin = false
@@ -161,9 +169,14 @@ windower.register_event('ipc message', function(msgStr)
   end
 end)
 
-windower.register_event('prerender', function()
+windower.register_event('prerender', function()	
+	local timeMsec = socket.gettime() * 1000
+	if timeMsec - lastUpdTime < updateIntervalMsec then return end
+	lastUpdTime = timeMsec
+
 	if not follow_me and not following then return end
 	local player = windower.ffxi.get_player()
+	
 	  
 	if follow_me > 0 then
 		local self = windower.ffxi.get_mob_by_target('me')
@@ -193,10 +206,14 @@ windower.register_event('prerender', function()
 		if len < 1 then len = 1 end
 		
 		if __should_attempt_to_cross_zone_line then -- zone
-			   -- Add a distance offset along the vector direction
+			
+			if timeMsec - lastZonePosUpdTime < zonePosUpdateInterval then return end
+			lastZonePosUpdTime = timeMsec
+
+			-- Add a distance offset along the vector direction
 			local p = windower.ffxi.get_mob_by_target('me')
 			local direction_vector = V{__last_x - p.x, __last_y - p.y, __last_z - p.z}
-			local distance_offset = 1.9 -- Set this to the distance you want to add (e.g., +1 or +2)
+			local distance_offset = 2 -- Set this to the distance you want to add (e.g., +1 or +2)
 
 			-- Normalize the direction vector and scale it by the offset distance
 			local unit_vector = direction_vector:normalize() * distance_offset
@@ -216,6 +233,7 @@ windower.register_event('prerender', function()
 				__should_attempt_to_cross_zone_line = false
 				return
 			else
+				windower.add_to_chat(5, '[FFO]: Adjusted position for zone: X: ' .. adjusted_x .. 'Y: ' .. adjusted_y .. '.')
 				windower.ffxi.run(adjusted_x, adjusted_y)
 				running = true
 				return
