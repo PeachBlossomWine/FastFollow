@@ -28,7 +28,7 @@ running = false
 local lastUpdTime = 0
 local lastZonePosUpdTime = 0
 -- Global position update interval in milliseconds
-local updateIntervalMsec = 10
+local updateIntervalMsec = 500
 -- Zoning only position update interval in milliseconds
 local zonePosUpdateInterval = 3000
 
