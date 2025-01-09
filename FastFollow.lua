@@ -194,7 +194,7 @@ windower.register_event('prerender', function()
 		if __in_mog_house then return end
 	   
 		if not target then
-			if running then
+			if running and (__engage or (not __engage and player.status ~= 1)) then
 				windower.ffxi.run(false)
 				running = false
 			end
@@ -234,7 +234,6 @@ windower.register_event('prerender', function()
 				return
 			else
 				windower.add_to_chat(5, '[FFO]: Adjusted position for zone: X: ' .. adjusted_x .. 'Y: ' .. adjusted_y .. '.')
-				--windower.ffxi.run(adjusted_x, adjusted_y)
 				run_to_pos(adjusted_x, adjusted_y, adjusted_z)
 				running = true
 				return
@@ -244,10 +243,10 @@ windower.register_event('prerender', function()
 		if target.zone == info.zone and distSq > min_dist and distSq < max_dist and (__engage or (not __engage and player.status ~= 1)) then --  and player.status ~= 1
 			windower.ffxi.run((target.x - self.x)/len, (target.y - self.y)/len)
 			running = true
-		elseif target.zone == info.zone and distSq <= min_dist and not __should_attempt_to_cross_zone_line then
+		elseif target.zone == info.zone and distSq <= min_dist and not __should_attempt_to_cross_zone_line and (__engage or (not __engage and player.status ~= 1)) then
 			windower.ffxi.run(false)
 			running = true
-		elseif running then
+		elseif running and (__engage or (not __engage and player.status ~= 1)) then
 			windower.ffxi.run(false)
 			running = false
 		end
