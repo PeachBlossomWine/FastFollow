@@ -65,11 +65,11 @@ windower.register_event('addon command', function(command, ...)
     repeated = false
     windower.send_ipc_message('follow '..self.name)
 	windower.add_to_chat(5, '[FFO]: All follow leader: '..self.name)
-  elseif command == 'stop' then
+  elseif command == 'stop' or command == 'foff' then
     if following then windower.send_ipc_message('stopfollowing '..following) end
     following = false
     windower.add_to_chat(5, '[FFO]: Stop follow.')
-  elseif command == 'stopall' or command == 'off' then
+  elseif command == 'stopall' then
     follow_me = 0
     following = false
     windower.send_ipc_message('stop')
